@@ -1,0 +1,204 @@
+Assumptions:
+1. Both elevators have infinite capacity to accomodate users
+2. Cost of travel UP and DOWN is the same
+3. Each floor has controller switch which handles both elevators A and B, so that start floor of user is known
+4. Elevator can admit users when its HAULTED OR when its in motion and can take users without changing its original direction_of_movement
+    which avoids inconvenience to previously accomodated users and also ensures waiting time of user is reduced significantly.
+
+
+
+Psuedocode:
+
+------------------------------------------	----
+Required VARIABLES and DATA_STRUCTURE
+----------------------------------------------
+
+// Initialize the current floor of each elevator
+VARIABLE current_floor_A = 0 // Current floor of elevator A
+VARIABLE current_floor_B = 0 // Current floor of elevator B
+VARIABLE target_floor_A = 0 // Target floor of elevator A
+VARIABLE target_floor_B = 0 // Target floor of elevator B
+VARIABLE direction_of_movement_A = 0 // UP or DOWN or HAULTED
+VARIABLE direction_of_movement_B = 0 // UP or DOWN or HAULTED
+VARIABLE selected_elevator = None
+
+DATA_STRUCTURE Queue; // For enqeuing the user requests when elevator is busy
+                      // These users will be served when elevator's state is HAULTED i.e.(direction_of_movement == HAULTED)
+                      // Stores => <current_floor_number_of_user, target_floor_number> 
+                      // Above is the stored user request in the queue
+
+
+
+------------------------------------------------
+Utility function 
+------------------------------------------------
+
+// This function chooses the elevator that uses less energy to travel to a given floor
+
+FUNCTION choose_elevator(current_floor_number_of_user, target_floor_number):
+    // Return the elevator that uses less energy
+    
+    IF energy_used_by_elevator_A(current_floor_number_of_user, target_floor_number) < energy_used_by_elevator_B(current_floor_number_of_user, target_floor_number) THEN
+        RETURN elevator_A
+    ELSE
+        RETURN elevator_B
+
+
+// This function calculates the energy used by elevator A to travel to a given floor
+// Used only when both the elevators are at the HAULTED state
+
+FUNCTION energy_used_by_elevator_A(current_floor_number_of_user, target_floor_number):
+    RETURN X * ( Absolute(current_floor_number_of_user - current_floor_A) + Absolute(current_floor_number_of_user - target_floor_number))
+
+// This function calculates the energy used by elevator B to travel to a given floor
+// Used only when both the elevators are at the HAULTED state
+
+FUNCTION energy_used_by_elevator_B(current_floor_number_of_user, target_floor_number):
+    RETURN Y * ( Absolute(current_floor_number_of_user - current_floor_A) + Absolute(current_floor_number_of_user - target_floor_number))
+
+
+// Helps to check if the current user request for elevator is served immediately or user must wait 
+FUNCTION elevator_not_available(current_floor_number_of_user, target_floor_number):
+
+    // If both elevators moving away from current floor of user
+    // Then elevator not available 
+	IF ((current_floor_number_of_user > current_floor_A AND direction_of_movement_A == DOWN) OR 
+       (current_floor_number_of_user < current_floor_A AND direction_of_movement_A == UP) ) AND 
+       ((current_floor_number_of_user > current_floor_B AND direction_of_movement_B == DOWN) OR 
+       (current_floor_number_of_user < current_floor_B AND direction_of_movement_B == UP) ) THEN
+       RETURN True
+    
+    ELSE 
+        RETURN False
+
+
+// Both functions busy_elevator_A_cost and busy_elevator_B_cost
+// Calculate the additional energy consumed by elevator to drop user at target floor
+// without the choosen elevator changingits original direction of movement
+// 
+// It allows elevator to admit users in, while its taking other users in the same direction
+ 
+
+FUNCTION busy_elevator_A_cost(current_floor_number_of_user, target_floor_number):
+    // If elevator moving up and user wants to go in same direction
+    IF (direction_of_movement_A == UP AND current_floor_number_of_user > current_floor_A) THEN
+        IF target_floor_A > target_floor_number THEN 
+            RETURN 0 // No added cost required i.e. energy
+        ELSE 
+            RETURN X * (target_floor_number - target_floor_A)
+
+
+    // If elevator moving down and user wants to go in same direction
+    IF (direction_of_movement_A == DOWN AND current_floor_number_of_user < current_floor_A) THEN
+        IF target_floor_A < target_floor_number THEN 
+            RETURN 0 // No added cost required i.e. energy
+        ELSE 
+            RETURN X * (target_floor_A - target_floor_number)
+
+
+FUNCTION busy_elevator_B_cost(current_floor_number_of_user, target_floor_number):
+    // If elevator moving up and user wants to go in same direction
+    IF (direction_of_movement_B == UP AND current_floor_number_of_user > current_floor_B) THEN
+        IF target_floor_B > target_floor_number THEN 
+            RETURN 0 // No added cost required i.e. energy
+        ELSE 
+            RETURN X * (target_floor_number - target_floor_B)
+
+
+    // If elevator moving down and user wants to go in same direction
+    IF (direction_of_movement_B == DOWN AND current_floor_number_of_user < current_floor_B) THEN
+        IF target_floor_B < target_floor_number THEN 
+            RETURN 0 // No added cost required i.e. energy
+        ELSE 
+            RETURN X * (target_floor_B - target_floor_number)
+
+
+
+    
+---------------------------------------------------
+// Driver code
+-------------------------------------------------------
+
+WHILE True:
+    // Read the floor number from user input
+    READ target_floor_number from user input
+
+    // Initialize current floor person variable to current floor of the person in the building
+    INITIALIZE current_floor_number_of_user = floor number of the controller switch 
+
+    IF elevator_not_available(current_floor_number_of_user, target_floor_number) THEN
+
+        // Using Queue ensures that every user of system has fair waiting time
+        
+        Queue.enque(<current_floor_number_of_user, target_floor_number>)
+
+    ELSE
+        
+        IF (direction_of_movement_B == HAULTED AND direction_of_movement_A == HAULTED) THEN
+
+            // Identify energy optimal elevator
+            selected_elevator = choose_from_HAULTED_elevators(current_floor_number_of_user, target_floor_number)
+
+            IF selected_elevator == elevator_A THEN
+                // If elevator A is chosen, update its target floor
+                target_floor_A = target_floor_number
+
+                // Use elevator A to travel to the floor
+                SET direction_of_movement_A to appropriate value to pick up the user and drop to target floor
+
+            ELSE
+                // If elevator B is chosen, update its target floor
+                target_floor_B = target_floor_number
+
+                // Use elevator A to travel to the floor
+                SET direction_of_movement_B to appropriate value to pick up the user and drop to target floor
+
+        ELSE 
+            // Identify energy optimal elevator which can pick user with minimum extra cost without changing its direction
+            // This is to ensure energy usage is optimal and also waiting time of users is reduced
+            // i.e. Users can be picked by elevator before reaching to its target floor if the new users target floor can be
+            // reached without changing direction of elevator and with no or minimum added cost
+
+            IF (direction_of_movement_B != HAULTED AND direction_of_movement_A == HAULTED) THEN
+            
+                energy_A =   X * ( Absolute(current_floor_number_of_user - current_floor_A) + Absolute(current_floor_number_of_user - target_floor_number))
+                energy_B = busy_elevator_B_cost(current_floor_number_of_user, target_floor_number)
+
+                selected_elevator = elevator with min(energy_A, energy_B)
+            
+            ELSE IF (direction_of_movement_B == HAULTED AND direction_of_movement_A != HAULTED) THEN
+
+                energy_B =   Y * ( Absolute(current_floor_number_of_user - current_floor_A) + Absolute(current_floor_number_of_user - target_floor_number))
+                energy_A = busy_elevator_A_cost(current_floor_number_of_user, target_floor_number)
+
+                selected_elevator = elevator with min(energy_A, energy_B)
+            
+            ELSE
+                // Both are busy
+                // Chances are to reduce waiting time of user 
+                // And also energy consumed might be zero to transport this user
+
+                energy_B = busy_elevator_B_cost(current_floor_number_of_user, target_floor_number)
+                energy_A = busy_elevator_A_cost(current_floor_number_of_user, target_floor_number)
+
+                selected_elevator = elevator with min(energy_A, energy_B)
+        
+
+        // Now manipulate the direction of motion of chosen elevator
+                
+        Mainpulate either direction_of_movement_A or direction_of_movement_B based on selected_elevator
+
+    
+    // Now update the current_floor of elevator
+
+    IF selected_elevator == A THEN
+        UPDATE current_floor_A depending on direction_of_movement_A
+    ELSE
+        UPDATE current_floor_B depending on direction_of_movement_B
+
+    // If any of the elevator has reached its target floor then
+    // update its direction_of_movement = HAULTED
+    
+    IF current_floor_A == target_floor_A OR current_floor_B == target_floor_B THEN
+        Dequeue the waiting user request from the Queue and check 
+        if it can be served
